@@ -4620,8 +4620,8 @@ typescript-definition-tester@0.0.5:
     lodash "^3.6.0"
 
 typescript@^2.1.4:
-  version "2.7.1"
-  resolved "https://registry.yarnpkg.com/typescript/-/typescript-2.7.1.tgz#bb3682c2c791ac90e7c6210b26478a8da085c359"
+  version "2.9.2"
+  resolved "https://registry.yarnpkg.com/typescript/-/typescript-2.9.2.tgz#1cbf61d05d6b96269244eb6a3bce4bd914e0f00c"
 
 uglify-es@^3.3.7, uglify-es@^3.3.8:
   version "3.3.10"
