@@ -5,17 +5,17 @@ import ValuesSchema from './schemas/Values';
 import ArraySchema, * as ArrayUtils from './schemas/Array';
 import ObjectSchema, * as ObjectUtils from './schemas/Object';
 
-const visit = (value, parent, key, schema, addEntity) => {
+const visit = (value, parent, key, schema, addEntity, visitedEntities) => {
   if (typeof value !== 'object' || !value) {
     return value;
   }
 
   if (typeof schema === 'object' && (!schema.normalize || typeof schema.normalize !== 'function')) {
     const method = Array.isArray(schema) ? ArrayUtils.normalize : ObjectUtils.normalize;
-    return method(schema, value, parent, key, visit, addEntity);
+    return method(schema, value, parent, key, visit, addEntity, visitedEntities);
   }
 
-  return schema.normalize(value, parent, key, visit, addEntity);
+  return schema.normalize(value, parent, key, visit, addEntity, visitedEntities);
 };
 
 const addEntities = (entities) => (schema, processedEntity, value, parent, key) => {
@@ -43,18 +43,28 @@ export const schema = {
 
 export const normalize = (input, schema) => {
   if (!input || typeof input !== 'object') {
-    throw new Error(`Unexpected input given to normalize. Expected type to be "object", found "${typeof input}".`);
+    throw new Error(
+      `Unexpected input given to normalize. Expected type to be "object", found "${
+        input === null ? 'null' : typeof input
+      }".`
+    );
   }
 
   const entities = {};
   const addEntity = addEntities(entities);
+  const visitedEntities = {};
 
-  const result = visit(input, input, null, schema, addEntity);
+  const result = visit(input, input, null, schema, addEntity, visitedEntities);
   return { entities, result };
 };
 
 const unvisitEntity = (id, schema, unvisit, getEntity, cache) => {
-  const entity = getEntity(id, schema);
+  let entity = getEntity(id, schema);
+
+  if (entity === undefined && schema instanceof EntitySchema) {
+    entity = schema.fallback(id, schema);
+  }
+
   if (typeof entity !== 'object' || entity === null) {
     return entity;
   }
@@ -108,7 +118,11 @@ const getEntities = (entities) => {
       return entityOrId;
     }
 
-    return isImmutable ? entities.getIn([schemaKey, entityOrId.toString()]) : entities[schemaKey][entityOrId];
+    if (isImmutable) {
+      return entities.getIn([schemaKey, entityOrId.toString()]);
+    }
+
+    return entities[schemaKey] && entities[schemaKey][entityOrId];
   };
 };
 

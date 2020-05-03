@@ -29,12 +29,12 @@ export default class PolymorphicSchema {
     return this.schema[attr];
   }
 
-  normalizeValue(value, parent, key, visit, addEntity) {
+  normalizeValue(value, parent, key, visit, addEntity, visitedEntities) {
     const schema = this.inferSchema(value, parent, key);
     if (!schema) {
       return value;
     }
-    const normalizedValue = visit(value, parent, key, schema, addEntity);
+    const normalizedValue = visit(value, parent, key, schema, addEntity, visitedEntities);
     return this.isSingleSchema || normalizedValue === undefined || normalizedValue === null
       ? normalizedValue
       : { id: normalizedValue, schema: this.getSchemaAttribute(value, parent, key) };
@@ -45,7 +45,7 @@ export default class PolymorphicSchema {
     if (!this.isSingleSchema && !schemaKey) {
       return value;
     }
-    const id = isImmutable(value) ? value.get('id') : value.id;
+    const id = this.isSingleSchema ? undefined : isImmutable(value) ? value.get('id') : value.id;
     const schema = this.isSingleSchema ? this.schema : this.schema[schemaKey];
     return unvisit(id || value, schema);
   }

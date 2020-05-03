@@ -12,10 +12,27 @@ describe('normalize', () => {
     expect(() => normalize({})).toThrow();
   });
 
+  test('cannot normalize with null input', () => {
+    const mySchema = new schema.Entity('tacos');
+    expect(() => normalize(null, mySchema)).toThrow(/null/);
+  });
+
   test('normalizes entities', () => {
     const mySchema = new schema.Entity('tacos');
 
     expect(normalize([{ id: 1, type: 'foo' }, { id: 2, type: 'bar' }], [mySchema])).toMatchSnapshot();
+  });
+
+  test('normalizes entities with circular references', () => {
+    const user = new schema.Entity('users');
+    user.define({
+      friends: [user]
+    });
+
+    const input = { id: 123, friends: [] };
+    input.friends.push(input);
+
+    expect(normalize(input, user)).toMatchSnapshot();
   });
 
   test('normalizes nested entities', () => {
@@ -81,11 +98,11 @@ describe('normalize', () => {
         return entity.uuid;
       }
 
-      normalize(input, parent, key, visit, addEntity) {
+      normalize(input, parent, key, visit, addEntity, visitedEntities) {
         const entity = { ...input };
         Object.keys(this.schema).forEach((key) => {
           const schema = this.schema[key];
-          entity[key] = visit(input[key], input, key, schema, addEntity);
+          entity[key] = visit(input[key], input, key, schema, addEntity, visitedEntities);
         });
         addEntity(this, entity, parent, key);
         return {
@@ -145,6 +162,59 @@ describe('normalize', () => {
 
     expect(() => normalize(test, testEntity)).not.toThrow();
   });
+
+  test('can normalize entity nested inside entity using property from parent', () => {
+    const linkablesSchema = new schema.Entity('linkables');
+    const mediaSchema = new schema.Entity('media');
+    const listsSchema = new schema.Entity('lists');
+
+    const schemaMap = {
+      media: mediaSchema,
+      lists: listsSchema
+    };
+
+    linkablesSchema.define({
+      data: (parent) => schemaMap[parent.schema_type]
+    });
+
+    const input = {
+      id: 1,
+      module_type: 'article',
+      schema_type: 'media',
+      data: {
+        id: 2,
+        url: 'catimage.jpg'
+      }
+    };
+
+    expect(normalize(input, linkablesSchema)).toMatchSnapshot();
+  });
+
+  test('can normalize entity nested inside object using property from parent', () => {
+    const mediaSchema = new schema.Entity('media');
+    const listsSchema = new schema.Entity('lists');
+
+    const schemaMap = {
+      media: mediaSchema,
+      lists: listsSchema
+    };
+
+    const linkablesSchema = {
+      data: (parent) => schemaMap[parent.schema_type]
+    };
+
+    const input = {
+      id: 1,
+      module_type: 'article',
+      schema_type: 'media',
+      data: {
+        id: 2,
+        url: 'catimage.jpg'
+      }
+    };
+
+    expect(normalize(input, linkablesSchema)).toMatchSnapshot();
+  });
 });
 
 describe('denormalize', () => {
@@ -202,6 +272,33 @@ describe('denormalize', () => {
         '8472': {
           id: '8472',
           name: 'Paul'
+        }
+      }
+    };
+    expect(denormalize('123', article, entities)).toMatchSnapshot();
+  });
+
+  test('set to undefined if schema key is not in entities', () => {
+    const user = new schema.Entity('users');
+    const comment = new schema.Entity('comments', {
+      user: user
+    });
+    const article = new schema.Entity('articles', {
+      author: user,
+      comments: [comment]
+    });
+
+    const entities = {
+      articles: {
+        '123': {
+          id: '123',
+          author: '8472',
+          comments: ['1']
+        }
+      },
+      comments: {
+        '1': {
+          user: '123'
         }
       }
     };
