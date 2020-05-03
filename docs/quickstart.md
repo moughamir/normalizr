@@ -35,10 +35,10 @@ const comment = new schema.Entity('comments', {
   commenter: user
 });
 
-// Define your article 
-const article = new schema.Entity('articles', { 
+// Define your article
+const article = new schema.Entity('articles', {
   author: user,
-  comments: [ comment ]
+  comments: [comment]
 });
 
 const normalizedData = normalize(originalData, article);
@@ -50,8 +50,8 @@ Now, `normalizedData` will be:
 {
   result: "123",
   entities: {
-    "articles": { 
-      "123": { 
+    "articles": {
+      "123": {
         id: "123",
         author: "1",
         title: "My awesome blog post",

@@ -14,7 +14,8 @@ export default class EntitySchema {
       mergeStrategy = (entityA, entityB) => {
         return { ...entityA, ...entityB };
       },
-      processStrategy = (input) => ({ ...input })
+      processStrategy = (input) => ({ ...input }),
+      fallbackStrategy = (key, schema) => undefined
     } = options;
 
     this._key = key;
@@ -22,6 +23,7 @@ export default class EntitySchema {
     this._idAttribute = idAttribute;
     this._mergeStrategy = mergeStrategy;
     this._processStrategy = processStrategy;
+    this._fallbackStrategy = fallbackStrategy;
     this.define(definition);
   }
 
@@ -48,17 +50,43 @@ export default class EntitySchema {
     return this._mergeStrategy(entityA, entityB);
   }
 
-  normalize(input, parent, key, visit, addEntity) {
+  fallback(id, schema) {
+    return this._fallbackStrategy(id, schema);
+  }
+
+  normalize(input, parent, key, visit, addEntity, visitedEntities) {
+    const id = this.getId(input, parent, key);
+    const entityType = this.key;
+
+    if (!(entityType in visitedEntities)) {
+      visitedEntities[entityType] = {};
+    }
+    if (!(id in visitedEntities[entityType])) {
+      visitedEntities[entityType][id] = [];
+    }
+    if (visitedEntities[entityType][id].some((entity) => entity === input)) {
+      return id;
+    }
+    visitedEntities[entityType][id].push(input);
+
     const processedEntity = this._processStrategy(input, parent, key);
     Object.keys(this.schema).forEach((key) => {
       if (processedEntity.hasOwnProperty(key) && typeof processedEntity[key] === 'object') {
         const schema = this.schema[key];
-        processedEntity[key] = visit(processedEntity[key], processedEntity, key, schema, addEntity);
+        const resolvedSchema = typeof schema === 'function' ? schema(input) : schema;
+        processedEntity[key] = visit(
+          processedEntity[key],
+          processedEntity,
+          key,
+          resolvedSchema,
+          addEntity,
+          visitedEntities
+        );
       }
     });
 
     addEntity(this, processedEntity, input, parent, key);
-    return this.getId(input, parent, key);
+    return id;
   }
 
   denormalize(entity, unvisit) {

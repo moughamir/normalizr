@@ -52,6 +52,59 @@ Array [
 ]
 `;
 
+exports[`denormalize set to undefined if schema key is not in entities 1`] = `
+Object {
+  "author": undefined,
+  "comments": Array [
+    Object {
+      "user": undefined,
+    },
+  ],
+  "id": "123",
+}
+`;
+
+exports[`normalize can normalize entity nested inside entity using property from parent 1`] = `
+Object {
+  "entities": Object {
+    "linkables": Object {
+      "1": Object {
+        "data": 2,
+        "id": 1,
+        "module_type": "article",
+        "schema_type": "media",
+      },
+    },
+    "media": Object {
+      "2": Object {
+        "id": 2,
+        "url": "catimage.jpg",
+      },
+    },
+  },
+  "result": 1,
+}
+`;
+
+exports[`normalize can normalize entity nested inside object using property from parent 1`] = `
+Object {
+  "entities": Object {
+    "media": Object {
+      "2": Object {
+        "id": 2,
+        "url": "catimage.jpg",
+      },
+    },
+  },
+  "result": Object {
+    "data": 2,
+    "id": 1,
+    "module_type": "article",
+    "schema_type": "media",
+  },
+}
+`;
+
 exports[`normalize can use fully custom entity classes 1`] = `
 Object {
   "entities": Object {
@@ -123,6 +176,22 @@ Object {
     1,
     2,
   ],
+}
+`;
+
+exports[`normalize normalizes entities with circular references 1`] = `
+Object {
+  "entities": Object {
+    "users": Object {
+      "123": Object {
+        "friends": Array [
+          123,
+        ],
+        "id": 123,
+      },
+    },
+  },
+  "result": 123,
 }
 `;
 
